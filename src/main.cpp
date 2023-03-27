@@ -25,11 +25,6 @@ void setup()
 		Serial.println("Motor Shield " + String(i) + " found.");
 		steppers[i]->setSpeed(STEPPER_RPM);		// 10 rpm
 		steppers[i + 1]->setSpeed(STEPPER_RPM); // 10 rpm
-
-		// Configure PWMs
-		PWMs[i].begin();
-		PWMs[i].setOscillatorFrequency(27000000);
-		PWMs[i].setPWMFreq(1600);
 	}
 	Serial.println("Found Steppers and PWMs");
 
@@ -100,36 +95,25 @@ void setup()
 		break;
 	}
 
-	// Set up RTC
-	Serial.println("--------- Setting up RTC -------------");
-	rtc.begin(); // Call rtc.begin() to initialize the library
-	// Now set the time...
-	// You can use the autoTime() function to set the RTC's clock and
-	// date to the compiliers predefined time. (It'll be a few seconds
-	// behind, but close!)
-	rtc.autoTime();
-
 	// Read from NV memory
 	// Set initial states
 	// Set operating mode
 	// Turn on LED Power and Motor Power
 	// Add tasks to scheduler
+	pinMode(ENCODER_1BTN_PIN, INPUT);
+	pinMode(ENCODER_1A_PIN, INPUT);
+	pinMode(ENCODER_1B_PIN, INPUT);
+	pinMode(ENCODER_2BTN_PIN, INPUT);
+	pinMode(ENCODER_2A_PIN, INPUT);
+	pinMode(ENCODER_2B_PIN, INPUT);
+	pinMode(PWR_SUPERVISOR_PIN, INPUT);
 
-	// Set up input pins
-	// pinMode(powerButtonPin, INPUT);
-	pinMode(encoder1ButtonPin, INPUT); // consider using internal pull ups to help debounce?
-	pinMode(encoder1APin, INPUT);
-	pinMode(encoder1BPin, INPUT);
-	pinMode(encoder2ButtonPin, INPUT);
-	pinMode(encoder2APin, INPUT);
-	pinMode(encoder2BPin, INPUT);
-
-	// Set up hardware interrupts
-	attachInterrupt(digitalPinToInterrupt(encoder1ButtonPin), encoder1Button_ISR(), FALLING);
-	attachInterrupt(digitalPinToInterrupt(encoder1APin), encoder1A_ISR(), RISING);
-	attachInterrupt(digitalPinToInterrupt(encoder2ButtonPin), encoder2Button_ISR(), FALLING);
-	attachInterrupt(digitalPinToInterrupt(encoder2APin), encoder2A_ISR(), RISING);
-	attachInterrupt(digitalPinToInterrupt(powerSupervisorPin), powerSupervisor_ISR(), FALLING);
+		// Set up hardware interrupts
+	attachInterrupt(digitalPinToInterrupt(ENCODER_1BTN_PIN), encoder1Button_ISR, FALLING);
+	attachInterrupt(digitalPinToInterrupt(ENCODER_1A_PIN), encoder1A_ISR, RISING);
+	attachInterrupt(digitalPinToInterrupt(ENCODER_2BTN_PIN), encoder2Button_ISR, FALLING);
+	attachInterrupt(digitalPinToInterrupt(ENCODER_2A_PIN), encoder2A_ISR, RISING);
+	attachInterrupt(digitalPinToInterrupt(PWR_SUPERVISOR_PIN), powerSupervisor_ISR, FALLING);
 	// --------------------------------
 }
 
