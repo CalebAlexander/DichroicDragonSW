@@ -30,6 +30,7 @@ void standardModeCallback()
 // FROZEN_MODE_UPDATE_RATE 10      //ms      -->> only executes once so doesn't really matter
 void frozenModeCallback()
 {
+  // Testing git
 }
 // RANDOM_MODE_UPDATE_RATE 100     //ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that
 void randomModeCallback()
