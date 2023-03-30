@@ -8,11 +8,20 @@
 // rtc.update(), rtc.seconds(), rtc.minutes(), rtc.date(), rtc.dayStr(), etc
 */
 
+Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);
+
+Task StandardModeTask(STANDARD_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &standardModeCallback, &ts, true); // Default Mode
+Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
+Task RandomModeTask(RANDOM_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_ONCE, &randomModeCallback, &ts, false);
+Task Pattern1ModeTask(PATTERN1_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &pattern1ModeCallback, &ts, false);
+Task Pattern2ModeTask(PATTERN2_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &pattern2ModeCallback, &ts, false);
+Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback, &ts, false);
+
 // --------- Task Scheduler Callbacks ----------
 // Maintenance
 void checkTemperatureCallback()
 {
-	Temp_Sensor.getEvent(&humidity, &temperature); // populate temp and humidity objects with fresh data
+	Temp_Sensor.getEvent(humidity, temperature); // populate temp and humidity objects with fresh data
 
 	// check temperature over threshold
 
@@ -118,7 +127,7 @@ void randomModeCallback()
 {
 	currentI = 0;
 	currentS = STANDARD_MODE_STEP_SIZE;
-	//Task &currentT = ts.currentTask();
+	// Task &currentT = ts.currentTask();
 	currentD = FORWARD;
 	currentF = standardModeCallback;
 
