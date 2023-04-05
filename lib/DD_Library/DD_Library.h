@@ -64,6 +64,7 @@
 #include <Adafruit_MCP23X17.h>
 #include <Adafruit_SHT4x.h>
 #include <FastLED.h>
+#include <SparkFun_External_EEPROM.h>
 // #include <SparkFunDS1307RTC.h>
 
 extern enum Mode {
@@ -100,6 +101,8 @@ extern Adafruit_MCP23X17 GPIO_Expander1;
 extern Adafruit_MCP23X17 GPIO_Expander2;
 // Temperature Sensor
 extern Adafruit_SHT4x Temp_Sensor;
+// EEPROM
+extern ExternalEEPROM EEPROM;
 // RTC
 // Object in library
 // Buttons

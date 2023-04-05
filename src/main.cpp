@@ -110,6 +110,7 @@ volatile float brightnesses[] = {
 Adafruit_MCP23X17 GPIO_Expander1 = Adafruit_MCP23X17();
 Adafruit_MCP23X17 GPIO_Expander2 = Adafruit_MCP23X17();
 Adafruit_SHT4x Temp_Sensor = Adafruit_SHT4x();
+ExternalEEPROM myMem = ExternalEEPROM();
 
 volatile int encoder1Pos = ENCODER_TICKS / 2;
 volatile int encoder1ButtonState = 0;
@@ -141,6 +142,9 @@ void setup()
 	while (!Serial)
 		;
 
+	Wire.begin();
+	Wire.setClock(400000);
+
 	// Set up Steppers and PWMs
 	Serial.println("--------- Setting up Steppers and PWMs -------------");
 	for (int i = 0; i < NUM_PWMS; i++)
@@ -153,8 +157,8 @@ void setup()
 				;
 		}
 		Serial.println("Motor Shield " + String(i) + " found.");
-		steppers[i]->setSpeed(STEPPER_RPM);		// 10 rpm
-		steppers[i + 1]->setSpeed(STEPPER_RPM); // 10 rpm
+		steppers[2 * i]->setSpeed(STEPPER_RPM);		// 10 rpm
+		steppers[2 * i + 1]->setSpeed(STEPPER_RPM); // 10 rpm
 	}
 	Serial.println("Found Steppers and PWMs");
 
@@ -236,6 +240,16 @@ void setup()
 	}
 
 	// Read from NV memory
+	if (myMem.begin() == false)
+	{
+		Serial.println("No memory detected. Freezing.");
+		while (1)
+			;
+	}
+	Serial.println("Memory detected!");
+
+	myMem.setMemorySize(512 * 1024 / 8); // Qwiic EEPROM is the 24512C (512k bit)
+
 	// Set initial states
 	// Set operating mode
 	// Turn on LED Power and Motor Power
