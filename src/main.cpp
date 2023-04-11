@@ -172,6 +172,7 @@ void setup()
 			;
 	}
 	Serial.println("Found GPIO Expander1");
+
 	// Set up GPIO Port Expander2
 	Serial.println("--------- Setting up GPIO Port Expander2 -------------");
 	if (!GPIO_Expander2.begin_I2C())
