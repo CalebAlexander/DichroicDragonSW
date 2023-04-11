@@ -173,23 +173,20 @@ void encoder1A_ISR()
 }
 void encoder2A_ISR()
 {
-	static unsigned long lastEncoder2InterruptTime = 0;
-	unsigned long interruptTime = millis();
-
-	if (interruptTime - lastEncoder2InterruptTime > ENCODER_DEBOUNCE_TIME)
-	{ // faster than 5ms is a bounce
-		if (digitalRead(ENCODER_2B_PIN) == LOW)
+	if (millis() - last_run > 5)
+	{
+		if (digitalRead(4) == 1)
 		{
-			// right turn
-			encoder2Pos--;
+			counter++;
+			dir = "CW";
 		}
-		else
+		if (digitalRead(4) == 0)
 		{
-			// left turn
-			encoder2Pos++;
+			counter--;
+			dir = "CCW";
 		}
+		last_run = millis();
 	}
-	encoder2Pos = max(0, min(ENCODER_TICKS, encoder2Pos));
 	// update mode
 	// do something
 }
