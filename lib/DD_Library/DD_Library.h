@@ -13,31 +13,72 @@
 #define NUM_PWMS 10
 #define NUM_STEPPERS 20
 #define NUM_LEDS 20
-#define NUM_MODE_LEDS 3
+#define NUM_STATUS_LEDS 3
 #define ENCODER_TICKS 12
 #define ENCODER_DEBOUNCE_TIME 5 // ms
 
+// Standard - White
+#define MODE_STANDARD_R 255
+#define MODE_STANDARD_G 255
+#define MODE_STANDARD_B 255
+// Frozen - Blue
+#define MODE_FROZEN_R 61
+#define MODE_FROZEN_G 67
+#define MODE_FROZEN_B 235
+// Random - Cyan
+#define MODE_RANDOM_R 61
+#define MODE_RANDOM_G 206
+#define MODE_RANDOM_B 235
+// Pattern 1 (Dragon Flow) - Purple
+#define MODE_PATTERN1_R 136
+#define MODE_PATTERN1_G 61
+#define MODE_PATTERN1_B 235
+// Pattern 2 (Bubbling) - Pink
+#define MODE_PATTERN2_R 235
+#define MODE_PATTERN2_G 61
+#define MODE_PATTERN2_B 220
+// Pattern 3 (Resting Dragon) - Green
+#define MODE_PATTERN3_R 9
+#define MODE_PATTERN3_G 217
+#define MODE_PATTERN3_B 75
+// Temp High - Orange
+#define STATUS_TEMP_HIGH_R 245
+#define STATUS_TEMP_HIGH_G 114
+#define STATUS_TEMP_HIGH_B 115
+// Bad Comms - Yellow
+#define STATUS_BAD_COMMS_R 235
+#define STATUS_BAD_COMMS_G 206
+#define STATUS_BAD_COMMS_B 61
+// Power Loss - Red
+#define STATUS_POWER_LOSS_R 250
+#define STATUS_POWER_LOSS_G 40
+#define STATUS_POWER_LOSS_B 40
+
+#define OFF 0
+
+#define STATUS_PIN_R 9
+#define STATUS_PIN_G 10
+#define STATUS_PIN_B 11
+
 #define STEPPER_STEPS 516
-#define STEPPER_RPM 10
+#define STEPPER_DEFAULT_RPM 10
+#define STEPPER_MAX_RPM 100
+#define STEPPER_MAX_ACCELERATION 10
 
 // ----------- Defaults -----------------
-#define STANDARD_MODE_UPDATE_RATE 4651 // ms      -->> one rotation every hour 60min*60sec = 2400 / 516ticks = 4.651 secs/tick
-#define FROZEN_MODE_UPDATE_RATE 10	   // ms      -->> only executes once so doesn't really matter
-#define RANDOM_MODE_UPDATE_RATE 100	   // ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that
-#define PATTERN1_MODE_UPDATE_RATE 100  // ms      -->> change brightness 10 times a second to make smooth flow appearance
-#define PATTERN2_MODE_UPDATE_RATE 100  // ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that, ignore brightness knob interrupt
-#define PATTERN3_MODE_UPDATE_RATE 10   // ms      -->> only executes once so doesn't really matter
-
-#define STANDARD_MODE_STEP_SIZE 1
-
 #define LED_DEFAULT_BRIGHTNESS 0.5
 #define LED_PWM_MIN 0
 #define LED_PWM_MAX 4092
 #define PWMS_IN_USE 5
+#define LED_UPDATE_RATE 10		   // ms
+#define STATUS_LED_FLASH_RATE 0.25 // ms
 
 #define TEMP_UPDATE_RATE 1	  // s
 #define EEPROM_UPDATE_RATE 60 // s
-// #define RTC_UPDATE_RATE 10          // s
+#define RTC_UPDATE_RATE 10	  // s
+#define PRINT_USA_DATE
+#define SQW_INPUT_PIN 2	  // Input pin to read SQW
+#define SQW_OUTPUT_PIN 13 // LED to indicate SQW's state
 
 #define PWM_1_ADDRESS 0x61
 #define PWM_2_ADDRESS 0x62
@@ -58,14 +99,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <TaskSchedulerDeclarations.h>
-// #include <AccelStepper.h>
+#include <AccelStepper.h>
+// #include <MultiStepper.h>
 #include <Adafruit_MotorShield.h>
 // #include <Adafruit_PWMServoDriver.h>
 #include <Adafruit_MCP23X17.h>
 #include <Adafruit_SHT4x.h>
 #include <FastLED.h>
 #include <SparkFun_External_EEPROM.h>
-// #include <SparkFunDS1307RTC.h>
+#include <SparkFunDS1307RTC.h>
 
 extern enum Mode {
 	STANDARD, // Standard - White - Default
@@ -73,13 +115,16 @@ extern enum Mode {
 	RANDOM,	  // Random - Yellow
 	PATTERN1, // Dragon Flow - Purple
 	PATTERN2, // Bubbling - Pink
-	PATTERN3  // Resting Dragon - Green
+	PATTERN3, // Resting Dragon - Green
+	NOMODE,	  // OFF
 } currentMode;
 
 extern enum Status {
 	OK,
 	TEMP_HIGH,
-	BAD_COMMS
+	BAD_COMMS,
+	POWER_LOSS,
+	NOSTATUS,
 } currentStatus;
 
 // typedef struct DD_Library
@@ -93,7 +138,12 @@ extern enum Status {
 extern Adafruit_MotorShield AFMS[NUM_PWMS];
 
 // Array of Stepper Motors
-extern Adafruit_StepperMotor *steppers[NUM_STEPPERS];
+extern Adafruit_StepperMotor *AFPS_Steppers[NUM_STEPPERS];
+// Array of Accell Steppers
+extern AccelStepper steppers[NUM_STEPPERS];
+// extern MultiStepper multistepper1;
+// extern MultiStepper multistepper2;
+
 // LED Pins
 extern const int LEDPins[NUM_LEDS];
 // GPIO Port Expander
@@ -133,7 +183,7 @@ extern sensors_event_t *temperature;
 // ---------- Function Prototypes ----------
 
 void checkTemperatureCallback();
-// void rtcCallback();
+void checkTimeCallback();
 
 void standardModeCallback(); // Standard - White - Default
 void frozenModeCallback();	 // Frozen - Blue
@@ -142,36 +192,79 @@ void pattern1ModeCallback(); // Dragon Flow - Purple
 void pattern2ModeCallback(); // Bubbling - Pink
 void pattern3ModeCallback(); // Resting Dragon - Green
 
-void updateStepper(int, int, int);
-void updateLED(int, float);
-
-void standardUpdateAllSteppersCallback();
-void standardUpdateAllLEDsCallback();
-void randomUpdateAllSteppersCallback();
-void randomUpdateAllLEDsCallback();
-void pattern1UpdateAllSteppersCallback();
-void pattern1UpdateAllLEDsCallback();
-void pattern2UpdateAllSteppersCallback();
-void pattern2UpdateAllLEDsCallback();
-void pattern3UpdateAllSteppersCallback();
-void pattern3UpdateAllLEDsCallback();
-
 void encoder1A_ISR();
 void encoder2A_ISR();
 void encoder1Button_ISR();
 void encoder2Button_ISR();
 void powerSupervisor_ISR();
 
+void updateLEDsCallback();
+void setLED();
+void showModeLED();
+void showStatusLED();
+void stopSTPCallback();
+void runSTPCallback();
+void updateLEDsCallback();
+
+void stp1f1();
+void stp1b1();
+void stp2f1();
+void stp2b1();
+void stp3f1();
+void stp3b1();
+void stp4f1();
+void stp4b1();
+void stp5f1();
+void stp5b1();
+void stp6f1();
+void stp6b1();
+void stp7f1();
+void stp7b1();
+void stp8f1();
+void stp8b1();
+void stp9f1();
+void stp9b1();
+void stp10f1();
+void stp10b1();
+void stp11f1();
+void stp11b1();
+void stp12f1();
+void stp12b1();
+void stp13f1();
+void stp13b1();
+void stp14f1();
+void stp14b1();
+void stp15f1();
+void stp15b1();
+void stp16f1();
+void stp16b1();
+void stp17f1();
+void stp17b1();
+void stp18f1();
+void stp18b1();
+void stp19f1();
+void stp19b1();
+void stp20f1();
+void stp20b1();
+
 extern Scheduler ts;
 
 // Status Tasks
-extern Task CheckTemperatureTask;
 extern Task StandardModeTask;
 extern Task FrozenModeTask;
 extern Task RandomModeTask;
 extern Task Pattern1ModeTask;
 extern Task Pattern2ModeTask;
 extern Task Pattern3ModeTask;
+
+extern Task CheckTimeTask;
+extern Task CheckTemperatureTask;
+extern Task RunSTPTask;
+extern Task StopSTPTask;
+extern Task UpdateLEDs;
+extern Task SetLEDTask;
+extern Task ShowStatusLED;
+extern Task ShowModeLED;
 
 // Task TenHzTask(100 * TASK_MILLISECOND, 10);
 

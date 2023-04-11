@@ -15,7 +15,7 @@ Adafruit_MotorShield AFMS[] = {
 	Adafruit_MotorShield(PWM_10_ADDRESS) // PWM10
 };
 
-Adafruit_StepperMotor *steppers[] = {
+Adafruit_StepperMotor *AFMS_steppers[] = {
 	AFMS[0].getStepper(STEPPER_STEPS, 1), // STP1
 	AFMS[0].getStepper(STEPPER_STEPS, 2), // STP2
 	AFMS[1].getStepper(STEPPER_STEPS, 1), // STP3
@@ -36,6 +36,29 @@ Adafruit_StepperMotor *steppers[] = {
 	AFMS[8].getStepper(STEPPER_STEPS, 2), // STP18
 	AFMS[9].getStepper(STEPPER_STEPS, 1), // STP19
 	AFMS[9].getStepper(STEPPER_STEPS, 2)  // STP20
+};
+
+AccelStepper steppers[] = {
+	AccelStepper(stp1f1, stp1b1),
+	AccelStepper(stp2f1, stp2b1),
+	AccelStepper(stp3f1, stp3b1),
+	AccelStepper(stp4f1, stp4b1),
+	AccelStepper(stp5f1, stp5b1),
+	AccelStepper(stp6f1, stp6b1),
+	AccelStepper(stp7f1, stp7b1),
+	AccelStepper(stp8f1, stp8b1),
+	AccelStepper(stp9f1, stp9b1),
+	AccelStepper(stp10f1, stp10b1),
+	AccelStepper(stp11f1, stp11b1),
+	AccelStepper(stp12f1, stp12b1),
+	AccelStepper(stp13f1, stp13b1),
+	AccelStepper(stp14f1, stp14b1),
+	AccelStepper(stp15f1, stp15b1),
+	AccelStepper(stp16f1, stp16b1),
+	AccelStepper(stp17f1, stp17b1),
+	AccelStepper(stp18f1, stp18b1),
+	AccelStepper(stp19f1, stp19b1),
+	AccelStepper(stp20f1, stp20b1),
 };
 
 const int LEDPins[] = {
@@ -157,8 +180,10 @@ void setup()
 				;
 		}
 		Serial.println("Motor Shield " + String(i) + " found.");
-		steppers[2 * i]->setSpeed(STEPPER_RPM);		// 10 rpm
-		steppers[2 * i + 1]->setSpeed(STEPPER_RPM); // 10 rpm
+		steppers[2 * i].setMaxSpeed(STEPPER_MAX_RPM);	   // 10 rpm
+		steppers[2 * i].setSpeed(STEPPER_DEFAULT_RPM);	   // 10 rpm
+		steppers[2 * i + 1].setMaxSpeed(STEPPER_MAX_RPM);  // 10 rpm
+		steppers[2 * i + 1].setSpeed(STEPPER_DEFAULT_RPM); // 10 rpm
 	}
 	Serial.println("Found Steppers and PWMs");
 
@@ -251,6 +276,13 @@ void setup()
 
 	myMem.setMemorySize(512 * 1024 / 8); // Qwiic EEPROM is the 24512C (512k bit)
 
+	// Setup RTC
+	rtc.begin(); // Call rtc.begin() to initialize the library
+	// (Optional) Sets the SQW output to a 1Hz square wave.
+	// (Pull-up resistor is required to use the SQW pin.)
+	rtc.writeSQW(SQW_SQUARE_1);
+	rtc.autoTime();
+
 	// Set initial states
 	// Set operating mode
 	// Turn on LED Power and Motor Power
@@ -262,6 +294,10 @@ void setup()
 	pinMode(ENCODER_2A_PIN, INPUT);
 	pinMode(ENCODER_2B_PIN, INPUT);
 	pinMode(PWR_SUPERVISOR_PIN, INPUT);
+
+	pinMode(SQW_INPUT_PIN, INPUT_PULLUP);
+	pinMode(SQW_OUTPUT_PIN, OUTPUT);
+	digitalWrite(SQW_OUTPUT_PIN, digitalRead(SQW_INPUT_PIN));
 
 	// Set up hardware interrupts
 	attachInterrupt(digitalPinToInterrupt(ENCODER_1BTN_PIN), encoder1Button_ISR, FALLING);

@@ -8,15 +8,21 @@
 // rtc.update(), rtc.seconds(), rtc.minutes(), rtc.date(), rtc.dayStr(), etc
 */
 
-Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);
-
-Task StandardModeTask(STANDARD_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &standardModeCallback, &ts, true); // Default Mode
+Task StandardModeTask(TASK_IMMEDIATE, TASK_ONCE, &standardModeCallback, &ts, true); // Default Mode
 Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
-Task RandomModeTask(RANDOM_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_ONCE, &randomModeCallback, &ts, false);
-Task Pattern1ModeTask(PATTERN1_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &pattern1ModeCallback, &ts, false);
-Task Pattern2ModeTask(PATTERN2_MODE_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &pattern2ModeCallback, &ts, false);
+Task RandomModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
+Task Pattern1ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern1ModeCallback, &ts, false);
+Task Pattern2ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern2ModeCallback, &ts, false);
 Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback, &ts, false);
 
+Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);
+Task CheckTimeTask(RTC_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTimeCallback, &ts, true);
+Task RunSTPTask(TASK_IMMEDIATE, TASK_FOREVER, &runSTPCallback, &ts, false);
+Task StopSTPTask(TASK_IMMEDIATE, NUM_STEPPERS, &stopSTPCallback, &ts, false);
+Task UpdateLEDs(LED_UPDATE_RATE *TASK_MILLISECOND, &updateLEDsCallback, &ts, false);
+Task SetLEDTask(TASK_IMMEDIATE, NUM_LEDS, &setLED, &ts, false);
+Task ShowStatusLED(STATUS_LED_FLASH_RATE *TASK_MILLISECOND, TASK_FOREVER, &showStatusLED, &ts, false);
+Task ShowModeLED(TASK_IMMEDIATE, TASK_ONCE, &showModeLED, &ts, false);
 // --------- Task Scheduler Callbacks ----------
 // Maintenance
 void checkTemperatureCallback()
@@ -27,113 +33,101 @@ void checkTemperatureCallback()
 
 	// throw error and turn things off
 }
-
-void updateStepper(int I, int S, int D)
+void checkTimeCallback()
 {
-	// STBY OFF
-	steppers[I]->step(S, D, SINGLE);
-	// STBY ON
-	switch (D)
-	{
-	case FORWARD:
-		stepper_pos[I] = (stepper_pos[I] + S) % STEPPER_STEPS;
-		break;
-	case BACKWARD:
-		stepper_pos[I] = (stepper_pos[I] - S) % STEPPER_STEPS;
-		break;
-	}
-}
-void updateLED(int I, float B)
-{
-	AFMS[I].setPWM(LEDPins[I] / PWMS_IN_USE, int(B * LED_PWM_MAX));
-	brightnesses[I] = B;
-}
-void standardUpdateAllSteppersCallback()
-{
-	updateStepper(currentI, currentS, currentD);
-	currentI++;
-	Task &currentT = ts.currentTask();
-	if (currentI < NUM_STEPPERS)
-	{
-		// done moving steppers
-		currentT.forceNextIteration();
-		return;
-	}
-	currentI = 0;
-	currentT.setCallback(currentF);
-	if (goBack)
-	{
-		currentT.forceNextIteration();
-	}
-}
-void standardUpdateAllLEDsCallback()
-{
-	updateLED(currentI, currentB);
-	currentI++;
-	Task &currentT = ts.currentTask();
-	if (currentI < NUM_LEDS)
-	{
-		// done moving steppers
-		currentT.forceNextIteration();
-		return;
-	}
-	currentI = 0;
-	currentT.setCallback(currentF);
-	if (goBack)
-	{
-		currentT.forceNextIteration();
-	}
-}
-void randomUpdateAllSteppersCallback()
-{
-}
-void randomUpdateAllLEDsCallback()
-{
+	rtc.update();
+	// Do something with this
 }
 
 // Modes
-
-// STANDARD_MODE_UPDATE_RATE 4651  //ms      -->> one rotation every hour 60min*60sec = 2400 / 516ticks = 4.651 secs/tick
 void standardModeCallback()
 {
-	currentI = 0;
-	currentS = STANDARD_MODE_STEP_SIZE;
-	Task &currentT = ts.currentTask();
-	currentD = FORWARD;
-	currentF = standardModeCallback;
-	// If first iteration, set LEDs
-	if (currentT.getIterations() == 0)
-	{
-		StandardModeTask.setCallback(&standardUpdateAllLEDsCallback);
-		goBack = true; // come back to this task to update steppers after LEDs
-		StandardModeTask.forceNextIteration();
-	}
-	// Move Steppers without blocking
-	StandardModeTask.setCallback(&standardUpdateAllSteppersCallback);
-	goBack = false;
-	StandardModeTask.forceNextIteration();
+	// Reset LEDs
+	brightnesses[] = {
+		currentB, // LED1
+		currentB, // LED2
+		currentB, // LED3
+		currentB, // LED4
+		currentB, // LED5
+		currentB, // LED6
+		currentB, // LED7
+		currentB, // LED8
+		currentB, // LED9
+		currentB, // LED10
+		currentB, // LED11
+		currentB, // LED12
+		currentB, // LED13
+		currentB, // LED14
+		currentB, // LED15
+		currentB, // LED16
+		currentB, // LED17
+		currentB, // LED18
+		currentB, // LED19
+		currentB  // LED20
+	};
+	SetLEDTask.restart();
+	// Reset Steppers
+	// disable run task, Stop steppers, goTo 0
+	// Set stepper speeds
+	// Start Steppers
+	// enable run task
 }
-
-// FROZEN_MODE_UPDATE_RATE 10      //ms      -->> only executes once so doesn't really matter
 void frozenModeCallback()
 {
-	currentI = 0;
-	currentS = 0;
-	currentD = -1;
-	currentF = frozenModeCallback;
+	// Reset LEDs
+	brightnesses[] = {
+		currentB, // LED1
+		currentB, // LED2
+		currentB, // LED3
+		currentB, // LED4
+		currentB, // LED5
+		currentB, // LED6
+		currentB, // LED7
+		currentB, // LED8
+		currentB, // LED9
+		currentB, // LED10
+		currentB, // LED11
+		currentB, // LED12
+		currentB, // LED13
+		currentB, // LED14
+		currentB, // LED15
+		currentB, // LED16
+		currentB, // LED17
+		currentB, // LED18
+		currentB, // LED19
+		currentB  // LED20
+	};
+	SetLEDTask.restart();
+	// Stop Steppers
+	// disable run task, Stop steppers
 }
 // RANDOM_MODE_UPDATE_RATE 100     //ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that
 void randomModeCallback()
 {
-	currentI = 0;
-	currentS = STANDARD_MODE_STEP_SIZE;
-	// Task &currentT = ts.currentTask();
-	currentD = FORWARD;
-	currentF = standardModeCallback;
-
-	RandomModeTask.setCallback(&randomUpdateAllSteppersCallback);
-	goBack = false;
-	RandomModeTask.forceNextIteration();
+	// Reset LEDs
+	brightnesses[] = {
+		currentB, // LED1
+		currentB, // LED2
+		currentB, // LED3
+		currentB, // LED4
+		currentB, // LED5
+		currentB, // LED6
+		currentB, // LED7
+		currentB, // LED8
+		currentB, // LED9
+		currentB, // LED10
+		currentB, // LED11
+		currentB, // LED12
+		currentB, // LED13
+		currentB, // LED14
+		currentB, // LED15
+		currentB, // LED16
+		currentB, // LED17
+		currentB, // LED18
+		currentB, // LED19
+		currentB  // LED20
+	};
+	SetLEDTask.restart();
 }
 // PATTERN1_MODE_UPDATE_RATE 100   //ms      -->> change brightness 10 times a second to make smooth flow appearance
 void pattern1ModeCallback()
@@ -200,4 +194,178 @@ void encoder2Button_ISR()
 
 void powerSupervisor_ISR()
 {
+	// Update Status LED
+	if (currentStatus != POWER_LOSS)
+	{
+		currentStatus = POWER_LOSS;
+	}
+	// Stop Steppers
+	if (!stopped)
+	{
+		StopSTPTask.restart();
+		return;
+	}
+	// Get Stepper positions
+	// Write positions to EEPROM
+	// Power off to LEDs and Steppers
 }
+
+void updateLEDsCallback()
+{
+	// Generate new values
+
+	// Start updating LEDs
+	SetLEDTask.restart();
+}
+void setLED()
+{
+	Task &currentT = ts.currentTask();
+	int ledNum = currentT.getIterations() % NUM_STEPPERS;
+
+	brightness = brightnesses[ledNum];
+	AFMS[ledNum].setPWM(LEDPins[ledNum] / PWMS_IN_USE, int(brightness * LED_PWM_MAX));
+}
+
+void showModeLED()
+{
+	switch (currentMode)
+	{
+	case STANDARD:
+		// do nothing except show pattern mode
+		analogWrite(STATUS_PIN_R, MODE_STANDARD_R);
+		analogWrite(STATUS_PIN_G, MODE_STANDARD_G);
+		analogWrite(STATUS_PIN_B, MODE_STANDARD_B);
+		break;
+	case FROZEN:
+		analogWrite(STATUS_PIN_R, MODE_FROZEN_R);
+		analogWrite(STATUS_PIN_G, MODE_FROZEN_G);
+		analogWrite(STATUS_PIN_B, MODE_FROZEN_B);
+		break;
+	case RANDOM:
+		analogWrite(STATUS_PIN_R, MODE_RANDOM_R);
+		analogWrite(STATUS_PIN_G, MODE_RANDOM_G);
+		analogWrite(STATUS_PIN_B, MODE_RANDOM_B);
+		break;
+	case PATTERN1:
+		analogWrite(STATUS_PIN_R, MODE_PATTERN1_R);
+		analogWrite(STATUS_PIN_G, MODE_PATTERN1_G);
+		analogWrite(STATUS_PIN_B, MODE_PATTERN1_B);
+		break;
+	case PATTERN2:
+		analogWrite(STATUS_PIN_R, MODE_PATTERN2_R);
+		analogWrite(STATUS_PIN_G, MODE_PATTERN2_G);
+		analogWrite(STATUS_PIN_B, MODE_PATTERN2_B);
+		break;
+	case PATTERN3:
+		analogWrite(STATUS_PIN_R, MODE_PATTERN3_R);
+		analogWrite(STATUS_PIN_G, MODE_PATTERN3_G);
+		analogWrite(STATUS_PIN_B, MODE_PATTERN3_B);
+		break;
+	case NOMODE:
+		analogWrite(STATUS_PIN_R, OFF);
+		analogWrite(STATUS_PIN_G, OFF);
+		analogWrite(STATUS_PIN_B, OFF);
+		break;
+	}
+}
+
+void showStatusLED()
+{
+	Task &currentT = ts.currentTask();
+	if (currentT.getIterations() % 2 == 0)
+	{
+		// Turn LEDs ON
+		switch (currentStatus)
+		{
+		case OK:
+			// do nothing except show pattern mode
+			break;
+		case TEMP_HIGH:
+			analogWrite(STATUS_PIN_R, STATUS_TEMP_HIGH_R);
+			analogWrite(STATUS_PIN_G, STATUS_TEMP_HIGH_G);
+			analogWrite(STATUS_PIN_B, STATUS_TEMP_HIGH_B);
+			break;
+		case BAD_COMMS:
+			analogWrite(STATUS_PIN_R, STATUS_BAD_COMMS`_R);
+			analogWrite(STATUS_PIN_G, STATUS_BAD_COMMS`_G);
+			analogWrite(STATUS_PIN_B, STATUS_BAD_COMMS`_B);
+			break;
+		case POWER_LOSS:
+			analogWrite(STATUS_PIN_R, STATUS_POWER_LOSS_R);
+			analogWrite(STATUS_PIN_G, STATUS_POWER_LOSS_G);
+			analogWrite(STATUS_PIN_B, STATUS_POWER_LOSS_B);
+			break;
+		case NOSTATUS:
+			analogWrite(STATUS_PIN_R, OFF);
+			analogWrite(STATUS_PIN_G, OFF);
+			analogWrite(STATUS_PIN_B, OFF);
+			break;
+		}
+	}
+	else
+	{
+		// Turn LEDs OFF
+		analogWrite(STATUS_PIN_R, OFF);
+		analogWrite(STATUS_PIN_G, OFF);
+		analogWrite(STATUS_PIN_B, OFF);
+	}
+}
+
+// --------------------------- Stepper Methods -------------------------------
+void stopSTPCallback()
+{
+	Task &currentT = ts.currentTask();
+	int stpNum = currentT.getIterations() % NUM_STEPPERS;
+	steppers[stpNum].stop();
+	if (currentT.isLastIteration() && goBack)
+	{
+		stopped = true;
+	}
+}
+void runSTPCallback()
+{
+	Task &currentT = ts.currentTask();
+	int stpNum = currentT.getIterations() % NUM_STEPPERS;
+	steppers[stpNum].runSpeed();
+	// currentT.forceNextIteration();
+}
+void stp1f1() { AFMS_steppers[0]->onestep(FORWARD, SINGLE); }
+void stp1b1() { AFMS_steppers[0]->onestep(BACKWARD, SINGLE); }
+void stp2f1() { AFMS_steppers[1]->onestep(FORWARD, SINGLE); }
+void stp2b1() { AFMS_steppers[1]->onestep(BACKWARD, SINGLE); }
+void stp3f1() { AFMS_steppers[2]->onestep(FORWARD, SINGLE); }
+void stp3b1() { AFMS_steppers[2]->onestep(BACKWARD, SINGLE); }
+void stp4f1() { AFMS_steppers[3]->onestep(FORWARD, SINGLE); }
+void stp4b1() { AFMS_steppers[3]->onestep(BACKWARD, SINGLE); }
+void stp5f1() { AFMS_steppers[4]->onestep(FORWARD, SINGLE); }
+void stp5b1() { AFMS_steppers[4]->onestep(BACKWARD, SINGLE); }
+void stp6f1() { AFMS_steppers[5]->onestep(FORWARD, SINGLE); }
+void stp6b1() { AFMS_steppers[5]->onestep(BACKWARD, SINGLE); }
+void stp7f1() { AFMS_steppers[6]->onestep(FORWARD, SINGLE); }
+void stp7b1() { AFMS_steppers[6]->onestep(BACKWARD, SINGLE); }
+void stp8f1() { AFMS_steppers[7]->onestep(FORWARD, SINGLE); }
+void stp8b1() { AFMS_steppers[7]->onestep(BACKWARD, SINGLE); }
+void stp9f1() { AFMS_steppers[8]->onestep(FORWARD, SINGLE); }
+void stp9b1() { AFMS_steppers[8]->onestep(BACKWARD, SINGLE); }
+void stp10f1() { AFMS_steppers[9]->onestep(FORWARD, SINGLE); }
+void stp10b1() { AFMS_steppers[9]->onestep(BACKWARD, SINGLE); }
+void stp11f1() { AFMS_steppers[10]->onestep(FORWARD, SINGLE); }
+void stp11b1() { AFMS_steppers[10]->onestep(BACKWARD, SINGLE); }
+void stp12f1() { AFMS_steppers[11]->onestep(FORWARD, SINGLE); }
+void stp12b1() { AFMS_steppers[11]->onestep(BACKWARD, SINGLE); }
+void stp13f1() { AFMS_steppers[12]->onestep(FORWARD, SINGLE); }
+void stp13b1() { AFMS_steppers[12]->onestep(BACKWARD, SINGLE); }
+void stp14f1() { AFMS_steppers[13]->onestep(FORWARD, SINGLE); }
+void stp14b1() { AFMS_steppers[13]->onestep(BACKWARD, SINGLE); }
+void stp15f1() { AFMS_steppers[14]->onestep(FORWARD, SINGLE); }
+void stp15b1() { AFMS_steppers[14]->onestep(BACKWARD, SINGLE); }
+void stp16f1() { AFMS_steppers[15]->onestep(FORWARD, SINGLE); }
+void stp16b1() { AFMS_steppers[15]->onestep(BACKWARD, SINGLE); }
+void stp17f1() { AFMS_steppers[16]->onestep(FORWARD, SINGLE); }
+void stp17b1() { AFMS_steppers[16]->onestep(BACKWARD, SINGLE); }
+void stp18f1() { AFMS_steppers[17]->onestep(FORWARD, SINGLE); }
+void stp18b1() { AFMS_steppers[17]->onestep(BACKWARD, SINGLE); }
+void stp19f1() { AFMS_steppers[18]->onestep(FORWARD, SINGLE); }
+void stp19b1() { AFMS_steppers[18]->onestep(BACKWARD, SINGLE); }
+void stp20f1() { AFMS_steppers[19]->onestep(FORWARD, SINGLE); }
+void stp20b1() { AFMS_steppers[19]->onestep(BACKWARD, SINGLE); }
