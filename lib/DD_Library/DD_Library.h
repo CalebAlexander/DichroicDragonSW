@@ -138,7 +138,7 @@ extern enum Status {
 extern Adafruit_MotorShield AFMS[NUM_PWMS];
 
 // Array of Stepper Motors
-extern Adafruit_StepperMotor *AFPS_Steppers[NUM_STEPPERS];
+extern Adafruit_StepperMotor *AFMS_Steppers[NUM_STEPPERS];
 // Array of Accell Steppers
 extern AccelStepper steppers[NUM_STEPPERS];
 // extern MultiStepper multistepper1;
@@ -170,12 +170,13 @@ extern volatile int currentD;	// current direction
 extern void (*currentF)(void);	// current function
 extern volatile float currentB; // Default brightness
 extern volatile bool goBack;
+extern volatile bool stopped;
 
 // Current Time
 // Array of Stepper positions
 extern volatile uint16_t stepper_pos[NUM_STEPPERS]; // 0 - 516
 // Array of LED brightnesses
-extern volatile float brightnesses[NUM_LEDS]; // 0 - 4095
+extern float brightnesses[NUM_LEDS]; // 0 - 4095
 // Current Temperature
 extern sensors_event_t *humidity;
 extern sensors_event_t *temperature;

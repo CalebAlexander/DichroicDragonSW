@@ -15,7 +15,7 @@ Adafruit_MotorShield AFMS[] = {
 	Adafruit_MotorShield(PWM_10_ADDRESS) // PWM10
 };
 
-Adafruit_StepperMotor *AFMS_steppers[] = {
+Adafruit_StepperMotor *AFMS_Steppers[] = {
 	AFMS[0].getStepper(STEPPER_STEPS, 1), // STP1
 	AFMS[0].getStepper(STEPPER_STEPS, 2), // STP2
 	AFMS[1].getStepper(STEPPER_STEPS, 1), // STP3
@@ -107,7 +107,7 @@ volatile uint16_t stepper_pos[] = {
 	0  // STP20
 };	   // 0 - 516
 
-volatile float brightnesses[] = {
+float brightnesses[] = {
 	LED_DEFAULT_BRIGHTNESS, // LED1
 	LED_DEFAULT_BRIGHTNESS, // LED2
 	LED_DEFAULT_BRIGHTNESS, // LED3
@@ -141,12 +141,12 @@ volatile int encoder2Pos = ENCODER_TICKS / 2;
 volatile int encoder2ButtonState = 0;
 
 volatile int currentI = 0;
-volatile int currentS = STANDARD_MODE_STEP_SIZE;
 volatile int currentP = 0;
 volatile int currentD = FORWARD;
 void (*currentF)(void) = NULL;
 volatile float currentB = LED_DEFAULT_BRIGHTNESS;
 volatile bool goBack = false;
+volatile bool stopped = true;
 
 sensors_event_t *temperature = NULL;
 sensors_event_t *humidity = NULL;
