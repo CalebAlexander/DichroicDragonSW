@@ -129,6 +129,50 @@ float brightnesses[] = {
 	LED_DEFAULT_BRIGHTNESS, // LED19
 	LED_DEFAULT_BRIGHTNESS	// LED20
 };
+float speeds[] = {
+	STEPPER_DEFAULT_RPM, // STP1
+	STEPPER_DEFAULT_RPM, // STP2
+	STEPPER_DEFAULT_RPM, // STP3
+	STEPPER_DEFAULT_RPM, // STP4
+	STEPPER_DEFAULT_RPM, // STP5
+	STEPPER_DEFAULT_RPM, // STP6
+	STEPPER_DEFAULT_RPM, // STP7
+	STEPPER_DEFAULT_RPM, // STP8
+	STEPPER_DEFAULT_RPM, // STP9
+	STEPPER_DEFAULT_RPM, // STP10
+	STEPPER_DEFAULT_RPM, // STP11
+	STEPPER_DEFAULT_RPM, // STP12
+	STEPPER_DEFAULT_RPM, // STP13
+	STEPPER_DEFAULT_RPM, // STP14
+	STEPPER_DEFAULT_RPM, // STP15
+	STEPPER_DEFAULT_RPM, // STP16
+	STEPPER_DEFAULT_RPM, // STP17
+	STEPPER_DEFAULT_RPM, // STP18
+	STEPPER_DEFAULT_RPM, // STP19
+	STEPPER_DEFAULT_RPM	 // STP20
+};
+long targets[] = {
+	HOME, // STP1
+	HOME, // STP2
+	HOME, // STP3
+	HOME, // STP4
+	HOME, // STP5
+	HOME, // STP6
+	HOME, // STP7
+	HOME, // STP8
+	HOME, // STP9
+	HOME, // STP10
+	HOME, // STP11
+	HOME, // STP12
+	HOME, // STP13
+	HOME, // STP14
+	HOME, // STP15
+	HOME, // STP16
+	HOME, // STP17
+	HOME, // STP18
+	HOME, // STP19
+	HOME, // STP20
+};
 
 Adafruit_MCP23X17 GPIO_Expander1 = Adafruit_MCP23X17();
 Adafruit_MCP23X17 GPIO_Expander2 = Adafruit_MCP23X17();
@@ -141,12 +185,14 @@ volatile int encoder2Pos = ENCODER_TICKS / 2;
 volatile int encoder2ButtonState = 0;
 
 volatile int currentI = 0;
+volatile int currentL = 0;
 volatile int currentP = 0;
 volatile int currentD = FORWARD;
 void (*currentF)(void) = NULL;
 volatile float currentB = LED_DEFAULT_BRIGHTNESS;
 volatile bool goBack = false;
 volatile bool stopped = true;
+volatile int numStopped = 0;
 
 sensors_event_t *temperature = NULL;
 sensors_event_t *humidity = NULL;
@@ -155,6 +201,31 @@ Status currentStatus = OK;
 Mode currentMode = STANDARD;
 
 Scheduler ts;
+// Mode Tasks
+Task StandardModeTask(TASK_IMMEDIATE, TASK_ONCE, &standardModeCallback_ResetLEDs, &ts, true); // Default Mode
+Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
+Task RandomModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
+Task Pattern1ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern1ModeCallback, &ts, false);
+Task Pattern2ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern2ModeCallback, &ts, false);
+Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback, &ts, false);
+
+// Miscellaneous Tasks
+Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);
+Task CheckTimeTask(RTC_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTimeCallback, &ts, true);
+Task ShowStatusLEDTask(STATUS_LED_FLASH_RATE *TASK_MILLISECOND, TASK_FOREVER, &showStatusLED, &ts, false);
+Task ShowModeLEDTask(TASK_IMMEDIATE, TASK_ONCE, &showModeLED, &ts, false);
+
+// Stepper Tasks
+Task RunSTPTask(TASK_IMMEDIATE, TASK_FOREVER, &runSTPCallback, &ts, false);
+Task RunToSTPTask(TASK_IMMEDIATE, TASK_FOREVER, &runToSTPCallback, &ts, false);
+Task StopSTPTask(TASK_IMMEDIATE, NUM_STEPPERS, &stopSTPCallback, &ts, false);
+Task SetSTPSpeedsTask(TASK_IMMEDIATE, NUM_STEPPERS, &setSTPSpeedsCallback, &ts, false);
+Task SetSTPTargetTask(TASK_IMMEDIATE, NUM_STEPPERS, &setSTPTargetsCallback, &ts, false);
+
+// LED Tasks
+Task UpdateLEDsTask(LED_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &updateLEDsCallback, &ts, false);
+Task SetLEDTask(TASK_IMMEDIATE, NUM_LEDS, &setLEDCallback, &ts, false);
+Task *previousT = NULL;
 
 void setup()
 {

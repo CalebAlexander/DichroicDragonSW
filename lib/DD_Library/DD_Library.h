@@ -55,6 +55,7 @@
 #define STATUS_POWER_LOSS_B 40
 
 #define OFF 0
+#define HOME 0
 
 #define STATUS_PIN_R 9
 #define STATUS_PIN_G 10
@@ -146,6 +147,7 @@ extern AccelStepper steppers[NUM_STEPPERS];
 
 // LED Pins
 extern const int LEDPins[NUM_LEDS];
+
 // GPIO Port Expander
 extern Adafruit_MCP23X17 GPIO_Expander1;
 extern Adafruit_MCP23X17 GPIO_Expander2;
@@ -167,16 +169,19 @@ extern volatile int currentI;	// current stepper to be moved
 extern volatile int currentS;	// number of steps to be moved
 extern volatile int currentP;	// position to be moved to
 extern volatile int currentD;	// current direction
+extern volatile int currentL;	// current LED
 extern void (*currentF)(void);	// current function
 extern volatile float currentB; // Default brightness
-extern volatile bool goBack;
 extern volatile bool stopped;
+extern volatile int numStopped;
 
 // Current Time
 // Array of Stepper positions
 extern volatile uint16_t stepper_pos[NUM_STEPPERS]; // 0 - 516
 // Array of LED brightnesses
-extern float brightnesses[NUM_LEDS]; // 0 - 4095
+extern float brightnesses[NUM_LEDS]; // 0.0 - 1.0
+extern float speeds[NUM_STEPPERS];
+extern long targets[NUM_STEPPERS];
 // Current Temperature
 extern sensors_event_t *humidity;
 extern sensors_event_t *temperature;
@@ -186,7 +191,13 @@ extern sensors_event_t *temperature;
 void checkTemperatureCallback();
 void checkTimeCallback();
 
-void standardModeCallback(); // Standard - White - Default
+// Standard Mode - White - Default
+void standardModeCallback_ResetLEDs();
+void standardModeCallback_SetHome();
+void standardModeCallback_GoHome();
+void standardModeCallback_SetSTPSpeeds();
+void standardModeCallback_RestartSTPRun();
+
 void frozenModeCallback();	 // Frozen - Blue
 void randomModeCallback();	 // Random - Yellow
 void pattern1ModeCallback(); // Dragon Flow - Purple
@@ -200,13 +211,22 @@ void encoder2Button_ISR();
 void powerSupervisor_ISR();
 
 void updateLEDsCallback();
-void setLED();
+void setLEDCallback();
 void showModeLED();
 void showStatusLED();
-void stopSTPCallback();
-void runSTPCallback();
+
 void updateLEDsCallback();
 
+// Stepper Callbacks
+void runSTPCallback();
+void runToSTPCallback();
+void setSTPTargetsCallback();
+void setSTPSpeedsCallback();
+void stopSTPCallback();
+
+// LED Callbacks
+
+// Accel Stepper required functions
 void stp1f1();
 void stp1b1();
 void stp2f1();
@@ -250,7 +270,7 @@ void stp20b1();
 
 extern Scheduler ts;
 
-// Status Tasks
+// Mode Tasks
 extern Task StandardModeTask;
 extern Task FrozenModeTask;
 extern Task RandomModeTask;
@@ -258,20 +278,24 @@ extern Task Pattern1ModeTask;
 extern Task Pattern2ModeTask;
 extern Task Pattern3ModeTask;
 
+// Miscellaneous Tasks
 extern Task CheckTimeTask;
 extern Task CheckTemperatureTask;
+extern Task ShowStatusLEDTask;
+extern Task ShowModeLEDTask;
+
+// Stepper Tasks
+extern Task SetSTPTargetTask;
+extern Task SetSTPSpeedsTask;
 extern Task RunSTPTask;
+extern Task RunToSTPTask;
 extern Task StopSTPTask;
-extern Task UpdateLEDs;
+
+// LED Tasks
+extern Task UpdateLEDsTask;
 extern Task SetLEDTask;
-extern Task ShowStatusLED;
-extern Task ShowModeLED;
 
-// Task TenHzTask(100 * TASK_MILLISECOND, 10);
-
-// Utility Tasks
-// Task UpdateStepperTask(TASK_IMMEDIATE, NUM_STEPPERS, &updateStepperCallback, &ts, false);
-// Task UpdateAllLEDSTask(TASK_IMMEDIATE, NUM_LEDS, &updateAllLEDsCallback, &ts, false);
-// ask UpdateModeLEDTask(TASK_IMMEDIATE, NUM_MODE_LEDS, &updateModeLEDCallback, &ts, false);
+// Reference Task
+extern Task *previousT;
 
 #endif

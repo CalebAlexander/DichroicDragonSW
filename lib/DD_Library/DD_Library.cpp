@@ -1,30 +1,5 @@
 #include "DD_Library.h"
-
-/* Sample Methods
-// steppers[0]->step(100, DIRECTION, STEPSIZE(SINGLE, DOUBLE, MICROSTEP));
-// PWMs[0].setPWM(PIN, LOW(0), HIGH(4092))
-// GPIO_Expander.digitalWrite(LED_PIN, !GPIO_Expander.digitalRead(BUTTON_PIN));
-// Temp_Sensor.getEvent(&humidity, &temp);// populate temp and humidity objects with fresh data
-// rtc.update(), rtc.seconds(), rtc.minutes(), rtc.date(), rtc.dayStr(), etc
-*/
-
-Task StandardModeTask(TASK_IMMEDIATE, TASK_ONCE, &standardModeCallback, &ts, true); // Default Mode
-Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
-Task RandomModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
-Task Pattern1ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern1ModeCallback, &ts, false);
-Task Pattern2ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern2ModeCallback, &ts, false);
-Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback, &ts, false);
-
-Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);
-Task CheckTimeTask(RTC_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTimeCallback, &ts, true);
-Task RunSTPTask(TASK_IMMEDIATE, TASK_FOREVER, &runSTPCallback, &ts, false);
-Task StopSTPTask(TASK_IMMEDIATE, NUM_STEPPERS, &stopSTPCallback, &ts, false);
-Task UpdateLEDs(LED_UPDATE_RATE *TASK_MILLISECOND, TASK_FOREVER, &updateLEDsCallback, &ts, false);
-Task SetLEDTask(TASK_IMMEDIATE, NUM_LEDS, &setLED, &ts, false);
-Task ShowStatusLED(STATUS_LED_FLASH_RATE *TASK_MILLISECOND, TASK_FOREVER, &showStatusLED, &ts, false);
-Task ShowModeLED(TASK_IMMEDIATE, TASK_ONCE, &showModeLED, &ts, false);
-// --------- Task Scheduler Callbacks ----------
-// Maintenance
+// ------------------------- Maintenance Tasks ---------------------------
 void checkTemperatureCallback()
 {
 	Temp_Sensor.getEvent(humidity, temperature); // populate temp and humidity objects with fresh data
@@ -39,20 +14,54 @@ void checkTimeCallback()
 	// Do something with this
 }
 
-// Modes
-void standardModeCallback()
+// -------------------------- Standard Mode ------------------------------
+// (1) - RESET LEDS
+void standardModeCallback_ResetLEDs()
 {
+	previousT = ts.getCurrentTask();
+	currentMode = STANDARD;
+	ShowModeLEDTask.restart();
 	// Reset LEDs
 	memset(brightnesses, currentB, sizeof(brightnesses));
-
 	SetLEDTask.restart();
-	// Reset Steppers
-	// disable run task, Stop steppers, goTo 0
-	// Set stepper speeds
-	// Start Steppers
-	stopped = true;
-	// enable run task
+	// SetLEDTask.forceNextIteration();
+	StandardModeTask.setCallback(&standardModeCallback_SetHome);
 }
+// (2) - SET STP TARGETS TO HOME
+void standardModeCallback_SetHome()
+{
+	memset(targets, HOME, sizeof(targets));
+	currentI = 0;
+	SetSTPTargetTask.restart();
+	StandardModeTask.setCallback(&standardModeCallback_GoHome);
+}
+// (3) - RUN STP TO HOME
+void standardModeCallback_GoHome()
+{
+	RunSTPTask.disable();
+	// StopSTPTask.restart();
+	currentI = 0;
+	RunToSTPTask.restart();
+
+	StandardModeTask.setCallback(&standardModeCallback_SetSTPSpeeds);
+}
+// (4) - SET NEW STP SPEEDS
+void standardModeCallback_SetSTPSpeeds()
+{
+	// Set stepper speeds
+	currentI = 0;
+	SetSTPSpeedsTask.restart();
+	StandardModeTask.setCallback(&standardModeCallback_RestartSTPRun);
+}
+// (5) - RESTART STP RUN SPEED
+void standardModeCallback_RestartSTPRun()
+{
+	// enable run task
+	RunSTPTask.restart();
+}
+
+// -------------------------- Frozen Mode ------------------------------
+
 void frozenModeCallback()
 {
 	// Reset LEDs
@@ -83,88 +92,30 @@ void pattern3ModeCallback()
 {
 }
 
-// ---------- Interrupt Service Routines ----------
-void encoder1A_ISR()
-{
-	static unsigned long lastEncoder1InterruptTime = 0;
-	unsigned long interruptTime = millis();
-
-	if (interruptTime - lastEncoder1InterruptTime > ENCODER_DEBOUNCE_TIME)
-	{ // faster than 5ms is a bounce
-		if (digitalRead(ENCODER_1B_PIN) == LOW)
-		{
-			// right turn
-			encoder1Pos--;
-		}
-		else
-		{
-			// left turn
-			encoder1Pos++;
-		}
-	}
-	encoder1Pos = max(0, min(ENCODER_TICKS, encoder1Pos));
-	// update mode
-	// do something
-}
-void encoder2A_ISR()
-{
-	// if (millis() - last_run > 5)
-	// {
-	// 	if (digitalRead(4) == 1)
-	// 	{
-	// 		counter++;
-	// 		dir = "CW";
-	// 	}
-	// 	if (digitalRead(4) == 0)
-	// 	{
-	// 		counter--;
-	// 		dir = "CCW";
-	// 	}
-	// 	last_run = millis();
-	// }
-	// update mode
-	// do something
-}
-
-void encoder1Button_ISR()
-{
-}
-void encoder2Button_ISR()
-{
-}
-
-void powerSupervisor_ISR()
-{
-	// Update Status LED
-	if (currentStatus != POWER_LOSS)
-	{
-		currentStatus = POWER_LOSS;
-	}
-	// Stop Steppers
-	if (!stopped)
-	{
-		StopSTPTask.restart();
-		return;
-	}
-	// Get Stepper positions
-	// Write positions to EEPROM
-	// Power off to LEDs and Steppers
-}
-
 void updateLEDsCallback()
 {
 	// Generate new values
 
 	// Start updating LEDs
+	previousT = NULL; // don't come back to this task immediately
 	SetLEDTask.restart();
 }
-void setLED()
+void setLEDCallback()
 {
-	Task &currentT = ts.currentTask();
-	int ledNum = currentT.getIterations() % NUM_STEPPERS;
-
-	float brightness = brightnesses[ledNum];
-	AFMS[ledNum].setPWM(LEDPins[ledNum] / PWMS_IN_USE, int(brightness * LED_PWM_MAX));
+	if (ts.getCurrentTask()->isFirstIteration())
+	{
+		currentL = 0;
+	}
+	AFMS[currentL].setPWM(LEDPins[currentL], int(brightnesses[currentL] * LED_PWM_MAX));
+	currentL = (currentL + 1) % NUM_LEDS;
+	if (ts.getCurrentTask()->isLastIteration())
+	{
+		if (previousT != NULL)
+		{
+			previousT->restart();
+			// previousT->forceNextIteration();
+		}
+	}
 }
 
 void showModeLED()
@@ -212,8 +163,7 @@ void showModeLED()
 
 void showStatusLED()
 {
-	Task &currentT = ts.currentTask();
-	if (currentT.getIterations() % 2 == 0)
+	if (ts.getCurrentTask()->getIterations() % 2 == 0)
 	{
 		// Turn LEDs ON
 		switch (currentStatus)
@@ -253,23 +203,147 @@ void showStatusLED()
 }
 
 // --------------------------- Stepper Methods -------------------------------
-void stopSTPCallback()
+
+// increments stepper if needed
+void runSTPCallback() // iterate over
 {
-	Task &currentT = ts.currentTask();
-	int stpNum = currentT.getIterations() % NUM_STEPPERS;
-	steppers[stpNum].stop();
-	if (currentT.isLastIteration() && goBack)
-	{
-		stopped = true;
-	}
-}
-void runSTPCallback()
-{
-	Task &currentT = ts.currentTask();
-	int stpNum = currentT.getIterations() % NUM_STEPPERS;
-	steppers[stpNum].runSpeed();
+	steppers[currentI].runSpeed();
+	currentI = (currentI + 1) % NUM_STEPPERS;
 	// currentT.forceNextIteration();
 }
+// moves steppers until all reach target position
+void runToSTPCallback()
+{
+	if (ts.getCurrentTask()->isFirstIteration())
+	{
+		numStopped = 0;
+		currentI = 0;
+	}
+	if (!steppers[currentI].runSpeedToPosition()) // if motor does not step, then it is in position
+	{
+		numStopped++;
+		if (numStopped >= NUM_STEPPERS)
+		{
+			// All motors are at targets
+			// Stop this task
+			ts.getCurrentTask()->disable();
+			// Go back to previous task
+			previousT->restart();
+			// previousT->forceNextIteration();
+		}
+	}
+	currentI = (currentI + 1) % NUM_STEPPERS;
+}
+// sets new targets for all steppers
+void setSTPTargetsCallback()
+{
+	if (ts.getCurrentTask()->isFirstIteration())
+	{
+		currentI = 0;
+	}
+	steppers[currentI].moveTo(targets[currentI]);
+	currentI = (currentI + 1) % NUM_STEPPERS;
+	if (currentI >= NUM_STEPPERS) // all steppers set
+	{
+		// Stop this task
+		ts.getCurrentTask()->disable();
+		// Go back to previous task
+		previousT->restart();
+		// previousT->forceNextIteration();
+	}
+}
+// sets new speeds for all steppers
+void setSTPSpeedsCallback()
+{
+	if (ts.getCurrentTask()->isFirstIteration())
+	{
+		currentI = 0;
+	}
+	steppers[currentI].setSpeed(speeds[currentI]);
+	currentI = (currentI + 1) % NUM_STEPPERS;
+	if (currentI >= NUM_STEPPERS) // all steppers set
+	{
+		// Stop this task
+		Task *currentT = ts.getCurrentTask();
+		currentT->disable();
+		// Go back to previous task
+		previousT->restart();
+		// previousT->forceNextIteration();
+	}
+}
+// sets all target positions to current position, make sure to disable runSTP
+void stopSTPCallback()
+{
+	if (ts.getCurrentTask()->isFirstIteration())
+	{
+		numStopped = 0;
+		currentI = 0;
+	}
+	steppers[currentI].stop();
+	currentI = (currentI + 1) % NUM_STEPPERS;
+	numStopped++;
+	if (numStopped >= NUM_STEPPERS) // all steppers stopped
+	{
+		stopped = true;
+		// Stop this task
+		ts.getCurrentTask()->disable();
+		// Go back to previous task
+		previousT->restart();
+		// previousT->forceNextIteration();
+	}
+}
+
+// ------------------------- Encoder and Button ISRs ----------------------------
+void encoder1A_ISR()
+{
+	static unsigned long lastEncoder1InterruptTime = 0;
+	unsigned long interruptTime = millis();
+
+	if (interruptTime - lastEncoder1InterruptTime > ENCODER_DEBOUNCE_TIME)
+	{ // faster than 5ms is a bounce
+		if (digitalRead(ENCODER_1B_PIN) == LOW)
+		{
+			// right turn
+			encoder1Pos--;
+		}
+		else
+		{
+			// left turn
+			encoder1Pos++;
+		}
+	}
+	encoder1Pos = max(0, min(ENCODER_TICKS, encoder1Pos));
+	// update mode
+	// do something
+}
+void encoder2A_ISR()
+{
+}
+void encoder1Button_ISR()
+{
+}
+void encoder2Button_ISR()
+{
+}
+void powerSupervisor_ISR()
+{
+	// Update Status LED
+	if (currentStatus != POWER_LOSS)
+	{
+		currentStatus = POWER_LOSS;
+	}
+	// Stop Steppers
+	if (!stopped)
+	{
+		StopSTPTask.restart();
+		return;
+	}
+	// Get Stepper positions
+	// Write positions to EEPROM
+	// Power off to LEDs and Steppers
+}
+
+// ------------------- Accel Stepper required functions --------------------------
 void stp1f1() { AFMS_Steppers[0]->onestep(FORWARD, SINGLE); }
 void stp1b1() { AFMS_Steppers[0]->onestep(BACKWARD, SINGLE); }
 void stp2f1() { AFMS_Steppers[1]->onestep(FORWARD, SINGLE); }
