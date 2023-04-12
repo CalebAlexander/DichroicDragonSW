@@ -22,6 +22,7 @@ void standardModeCallback_ResetLEDs()
 	currentMode = STANDARD;
 	ShowModeLEDTask.restart();
 	// Reset LEDs
+	UpdateLEDsTask.disable(); // stop constantly updating the LEDs
 	memset(brightnesses, currentB, sizeof(brightnesses));
 	SetLEDTask.restart();
 	// SetLEDTask.forceNextIteration();
@@ -30,26 +31,24 @@ void standardModeCallback_ResetLEDs()
 // (2) - SET STP TARGETS TO HOME
 void standardModeCallback_SetHome()
 {
+	// Reset targets
 	memset(targets, HOME, sizeof(targets));
-	currentI = 0;
 	SetSTPTargetTask.restart();
 	StandardModeTask.setCallback(&standardModeCallback_GoHome);
 }
 // (3) - RUN STP TO HOME
 void standardModeCallback_GoHome()
 {
+	// turn off indefinite running
 	RunSTPTask.disable();
-	// StopSTPTask.restart();
-	currentI = 0;
+	// run until home position
 	RunToSTPTask.restart();
-
 	StandardModeTask.setCallback(&standardModeCallback_SetSTPSpeeds);
 }
 // (4) - SET NEW STP SPEEDS
 void standardModeCallback_SetSTPSpeeds()
 {
 	// Set stepper speeds
-	currentI = 0;
 	SetSTPSpeedsTask.restart();
 	StandardModeTask.setCallback(&standardModeCallback_RestartSTPRun);
 }
@@ -58,19 +57,39 @@ void standardModeCallback_RestartSTPRun()
 {
 	// enable run task
 	RunSTPTask.restart();
+	// Done
+	previousT = NULL;
+	StandardModeTask.setCallback(&standardModeCallback_ResetLEDs);
 }
 
 // -------------------------- Frozen Mode ------------------------------
 
-void frozenModeCallback()
+// (1) - RESET LEDS
+void frozenModeCallback_ResetLEDs()
 {
+	previousT = ts.getCurrentTask();
+	currentMode = FROZEN;
+	ShowModeLEDTask.restart();
 	// Reset LEDs
+	UpdateLEDsTask.disable(); // stop constantly updating the LEDs
 	memset(brightnesses, currentB, sizeof(brightnesses));
 	SetLEDTask.restart();
-	// Stop Steppers
-	// disable run task, Stop steppers
+	// SetLEDTask.forceNextIteration();
+	FrozenModeTask.setCallback(&frozenModeCallback_StopSTPs);
 }
-// RANDOM_MODE_UPDATE_RATE 100     //ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that
+
+void frozenModeCallback_StopSTPs()
+{
+	// disable indefinite running
+	RunSTPTask.disable();
+	StopSTPTask.restart();
+	// Done
+	previousT = NULL;
+	FrozenModeTask.setCallback(&frozenModeCallback_ResetLEDs);
+}
+
+// -------------------------- Frozen Mode ------------------------------
+
 void randomModeCallback()
 {
 	// Reset LEDs
