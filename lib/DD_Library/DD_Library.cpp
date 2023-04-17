@@ -55,10 +55,10 @@ void standardModeCallback_SetSTPSpeeds()
 // (5) - RESTART STP RUN SPEED
 void standardModeCallback_RestartSTPRun()
 {
+	previousT = NULL; // this is last step so don't need to come back
 	// enable run task
 	RunSTPTask.restart();
 	// Done
-	previousT = NULL;
 	StandardModeTask.setCallback(&standardModeCallback_ResetLEDs);
 }
 
@@ -77,46 +77,171 @@ void frozenModeCallback_ResetLEDs()
 	// SetLEDTask.forceNextIteration();
 	FrozenModeTask.setCallback(&frozenModeCallback_StopSTPs);
 }
-
+// (2) - STOP STPS
 void frozenModeCallback_StopSTPs()
 {
+	previousT = NULL; // this is last step so don't need to come back
 	// disable indefinite running
 	RunSTPTask.disable();
 	StopSTPTask.restart();
 	// Done
-	previousT = NULL;
 	FrozenModeTask.setCallback(&frozenModeCallback_ResetLEDs);
 }
 
-// -------------------------- Frozen Mode ------------------------------
+// -------------------------- Random Mode ------------------------------
 
-void randomModeCallback()
+// (1) - RESET LEDS
+void randomModeCallback_ResetLEDs()
 {
+	previousT = ts.getCurrentTask();
+	currentMode = RANDOM;
+	ShowModeLEDTask.restart();
 	// Reset LEDs
+	UpdateLEDsTask.disable(); // stop constantly updating the LEDs
 	memset(brightnesses, currentB, sizeof(brightnesses));
 	SetLEDTask.restart();
+	// SetLEDTask.forceNextIteration();
+	RandomModeTask.setCallback(&randomModeCallback_SetSTPSpeeds);
+}
+// (2) - SET NEW STP SPEEDS
+void randomModeCallback_SetSTPSpeeds()
+{
+	previousT = NULL; // this is last step so don't need to come back
+	// Generate Random Speeds and directions
 
-	stopped = true;
+	// Set stepper speeds
+	SetSTPSpeedsTask.restart();
+	RandomModeTask.setCallback(&randomModeCallback_ResetLEDs);
 }
-// PATTERN1_MODE_UPDATE_RATE 100   //ms      -->> change brightness 10 times a second to make smooth flow appearance
-void pattern1ModeCallback()
+// -------------------------- Pattern 1 Mode ------------------------------
+
+// (1) - RESET LEDS
+void pattern1ModeCallback_ResetLEDs()
 {
+	previousT = ts.getCurrentTask();
+	currentMode = PATTERN1;
+	ShowModeLEDTask.restart();
+	// Reset LEDs
+	UpdateLEDsTask.disable();						 // stop constantly updating the LEDs
+	memset(brightnesses, OFF, sizeof(brightnesses)); // turn all LEDs off
+	SetLEDTask.restart();
+	// SetLEDTask.forceNextIteration();
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_SetHome);
 }
-// PATTERN2_MODE_UPDATE_RATE 100   //ms      -->> fastest rotation will be 10ticks/sec and all other random ones with me multiples of that, ignore brightness knob interrupt
-void pattern2ModeCallback()
+// (2) - SET STP TARGETS TO HOME
+void pattern1ModeCallback_SetHome()
 {
+	// Reset targets
+	memset(targets, HOME, sizeof(targets));
+	SetSTPTargetTask.restart();
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_GoHome);
 }
-// PATTERN3_MODE_UPDATE_RATE 10    //ms      -->> only executes once so doesn't really matter
-void pattern3ModeCallback()
+// (3) - RUN STP TO HOME
+void pattern1ModeCallback_GoHome()
 {
+
+	// turn off indefinite running
+	RunSTPTask.disable();
+	// run until home position
+	RunToSTPTask.restart();
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_StartPattern);
 }
+// (4) - START LED PATTERN
+void pattern1ModeCallback_StartPattern()
+{
+	previousT = NULL; // this is last step so don't need to come back
+
+	UpdateLEDsTask.restart();
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_ResetLEDs);
+}
+
+// -------------------------- Pattern 2 Mode ------------------------------
+
+// (1) - RESET LEDS
+void pattern2ModeCallback_ResetLEDs()
+{
+	previousT = ts.getCurrentTask();
+	currentMode = PATTERN2;
+	ShowModeLEDTask.restart();
+	// Reset LEDs
+	// UpdateLEDsTask.disable();						 // stop constantly updating the LEDs
+	// memset(brightnesses, OFF, sizeof(brightnesses)); // turn all LEDs off
+	// SetLEDTask.restart();
+	// SetLEDTask.forceNextIteration();
+	Pattern2ModeTask.setCallback(&pattern2ModeCallback_SetSTPSpeeds);
+}
+// (2) - SET NEW STP SPEEDS
+void pattern2ModeCallback_SetSTPSpeeds()
+{
+	// Generate Random Speeds and directions
+
+	// Set stepper speeds
+	SetSTPSpeedsTask.restart();
+	Pattern2ModeTask.setCallback(&pattern2ModeCallback_StartPattern);
+}
+// (3) - START LED PATTERN
+void pattern2ModeCallback_StartPattern()
+{
+	previousT = NULL; // this is last step so don't need to come back
+
+	UpdateLEDsTask.restart();
+	RunSTPTask.restart();
+	Pattern2ModeTask.setCallback(&pattern2ModeCallback_ResetLEDs);
+}
+
+// -------------------------- Pattern 3 Mode ------------------------------
+// (1) - RESET LEDS
+void pattern3ModeCallback_ResetLEDs()
+{
+	previousT = ts.getCurrentTask();
+	currentMode = PATTERN3;
+	ShowModeLEDTask.restart();
+	// Reset LEDs
+	UpdateLEDsTask.disable(); // stop constantly updating the LEDs
+	memset(brightnesses, currentB, sizeof(brightnesses));
+	SetLEDTask.restart();
+	// SetLEDTask.forceNextIteration();
+	Pattern3ModeTask.setCallback(&pattern3ModeCallback_SetHome);
+}
+// (2) - SET STP TARGETS TO HOME
+void pattern3ModeCallback_SetHome()
+{
+	// Reset targets
+	memset(targets, HOME, sizeof(targets));
+	SetSTPTargetTask.restart();
+	Pattern3ModeTask.setCallback(&pattern3ModeCallback_GoHome);
+}
+// (3) - RUN STP TO HOME
+void pattern3ModeCallback_GoHome()
+{
+	previousT = NULL; // this is last step so don't need to come back
+	// turn off indefinite running
+	RunSTPTask.disable();
+	// run until home position
+	RunToSTPTask.restart();
+	// done
+	Pattern3ModeTask.setCallback(&pattern3ModeCallback_ResetLEDs);
+}
+
+// --------------------------- LED Methods -------------------------------
 
 void updateLEDsCallback()
 {
 	// Generate new values
+	switch (currentMode)
+	{
+	case PATTERN1:
+
+		// Make LEDs "flow" along length of dragon
+		break;
+	case PATTERN2:
+
+		// Make LEDs "bubble" randomly
+		break;
+	}
 
 	// Start updating LEDs
-	previousT = NULL; // don't come back to this task immediately
+	// previousT = NULL; // don't come back to this task immediately
 	SetLEDTask.restart();
 }
 void setLEDCallback()
@@ -247,8 +372,11 @@ void runToSTPCallback()
 			// Stop this task
 			ts.getCurrentTask()->disable();
 			// Go back to previous task
-			previousT->restart();
-			// previousT->forceNextIteration();
+			if (previousT != NULL)
+			{
+				previousT->restart();
+				// previousT->forceNextIteration();
+			}
 		}
 	}
 	currentI = (currentI + 1) % NUM_STEPPERS;
@@ -267,8 +395,11 @@ void setSTPTargetsCallback()
 		// Stop this task
 		ts.getCurrentTask()->disable();
 		// Go back to previous task
-		previousT->restart();
-		// previousT->forceNextIteration();
+		if (previousT != NULL)
+		{
+			previousT->restart();
+			// previousT->forceNextIteration();
+		}
 	}
 }
 // sets new speeds for all steppers
@@ -283,11 +414,13 @@ void setSTPSpeedsCallback()
 	if (currentI >= NUM_STEPPERS) // all steppers set
 	{
 		// Stop this task
-		Task *currentT = ts.getCurrentTask();
-		currentT->disable();
+		ts.getCurrentTask()->disable();
 		// Go back to previous task
-		previousT->restart();
-		// previousT->forceNextIteration();
+		if (previousT != NULL)
+		{
+			previousT->restart();
+			// previousT->forceNextIteration();
+		}
 	}
 }
 // sets all target positions to current position, make sure to disable runSTP
@@ -307,8 +440,11 @@ void stopSTPCallback()
 		// Stop this task
 		ts.getCurrentTask()->disable();
 		// Go back to previous task
-		previousT->restart();
-		// previousT->forceNextIteration();
+		if (previousT != NULL)
+		{
+			previousT->restart();
+			// previousT->forceNextIteration();
+		}
 	}
 }
 

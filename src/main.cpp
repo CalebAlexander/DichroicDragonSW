@@ -203,11 +203,11 @@ Mode currentMode = STANDARD;
 Scheduler ts;
 // Mode Tasks
 Task StandardModeTask(TASK_IMMEDIATE, TASK_ONCE, &standardModeCallback_ResetLEDs, &ts, true); // Default Mode
-Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
-Task RandomModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback, &ts, false);
-Task Pattern1ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern1ModeCallback, &ts, false);
-Task Pattern2ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern2ModeCallback, &ts, false);
-Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback, &ts, false);
+Task FrozenModeTask(TASK_IMMEDIATE, TASK_ONCE, &frozenModeCallback_ResetLEDs, &ts, false);
+Task RandomModeTask(TASK_IMMEDIATE, TASK_ONCE, &randomModeCallback_ResetLEDs, &ts, false);
+Task Pattern1ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern1ModeCallback_ResetLEDs, &ts, false);
+Task Pattern2ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern2ModeCallback_ResetLEDs, &ts, false);
+Task Pattern3ModeTask(TASK_IMMEDIATE, TASK_ONCE, &pattern3ModeCallback_ResetLEDs, &ts, false);
 
 // Miscellaneous Tasks
 Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTemperatureCallback, &ts, true);

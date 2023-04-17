@@ -197,12 +197,25 @@ void standardModeCallback_SetHome();
 void standardModeCallback_GoHome();
 void standardModeCallback_SetSTPSpeeds();
 void standardModeCallback_RestartSTPRun();
-
-void frozenModeCallback();	 // Frozen - Blue
-void randomModeCallback();	 // Random - Yellow
-void pattern1ModeCallback(); // Dragon Flow - Purple
-void pattern2ModeCallback(); // Bubbling - Pink
-void pattern3ModeCallback(); // Resting Dragon - Green
+// Frozen Mode - Blue
+void frozenModeCallback_ResetLEDs();
+void frozenModeCallback_StopSTPs();
+// Random - Cyan
+void randomModeCallback_ResetLEDs();
+void randomModeCallback_SetSTPSpeeds();
+// Dragon Flow - Purple
+void pattern1ModeCallback_ResetLEDs();
+void pattern1ModeCallback_SetHome();
+void pattern1ModeCallback_GoHome();
+void pattern1ModeCallback_StartPattern();
+// Bubbling - Pink
+void pattern2ModeCallback_ResetLEDs();
+void pattern2ModeCallback_SetSTPSpeeds();
+void pattern2ModeCallback_StartPattern();
+// Resting Dragon - Green
+void pattern3ModeCallback_ResetLEDs();
+void pattern3ModeCallback_SetHome();
+void pattern3ModeCallback_GoHome();
 
 void encoder1A_ISR();
 void encoder2A_ISR();
