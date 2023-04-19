@@ -113,7 +113,7 @@ void randomModeCallback_SetSTPSpeeds()
 	SetSTPSpeedsTask.restart();
 	RandomModeTask.setCallback(&randomModeCallback_ResetLEDs);
 }
-// -------------------------- Pattern 1 Mode ------------------------------
+// -------------------------- Pattern 1 Mode - Dragon Flow------------------------------
 
 // (1) - RESET LEDS
 void pattern1ModeCallback_ResetLEDs()
@@ -155,7 +155,7 @@ void pattern1ModeCallback_StartPattern()
 	Pattern1ModeTask.setCallback(&pattern1ModeCallback_ResetLEDs);
 }
 
-// -------------------------- Pattern 2 Mode ------------------------------
+// -------------------------- Pattern 2 Mode - Bubbling ------------------------------
 
 // (1) - RESET LEDS
 void pattern2ModeCallback_ResetLEDs()
@@ -189,7 +189,7 @@ void pattern2ModeCallback_StartPattern()
 	Pattern2ModeTask.setCallback(&pattern2ModeCallback_ResetLEDs);
 }
 
-// -------------------------- Pattern 3 Mode ------------------------------
+// -------------------------- Pattern 3 Mode - Resting Dragon ------------------------------
 // (1) - RESET LEDS
 void pattern3ModeCallback_ResetLEDs()
 {
