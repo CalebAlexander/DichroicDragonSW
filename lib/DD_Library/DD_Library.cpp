@@ -483,16 +483,12 @@ void encoder2Button_ISR()
 void powerSupervisor_ISR()
 {
 	// Update Status LED
-	if (currentStatus != POWER_LOSS)
-	{
-		currentStatus = POWER_LOSS;
-	}
+	currentStatus = POWER_LOSS;
+	ShowStatusLEDTask.restart();
 	// Stop Steppers
-	if (!stopped)
-	{
-		StopSTPTask.restart();
-		return;
-	}
+	RunSTPTask.disable();
+	RunToSTPTask.disable();
+	StopSTPTask.restart();
 	// Get Stepper positions
 	// Write positions to EEPROM
 	// Power off to LEDs and Steppers
