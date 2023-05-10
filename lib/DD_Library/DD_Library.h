@@ -9,6 +9,9 @@
 #define ENCODER_2A_PIN 8
 #define ENCODER_2B_PIN 9
 #define PWR_SUPERVISOR_PIN 10
+#define ACTIVITY_LED_PIN 11
+#define STP_PWR_PIN A6
+#define LED_PWR_PIN A7
 
 #define NUM_PWMS 10
 #define NUM_STEPPERS 20
@@ -74,9 +77,11 @@
 #define LED_UPDATE_RATE 10		   // ms
 #define STATUS_LED_FLASH_RATE 0.25 // ms
 
-#define TEMP_UPDATE_RATE 1	  // s
-#define EEPROM_UPDATE_RATE 60 // s
-#define RTC_UPDATE_RATE 10	  // s
+#define TEMP_UPDATE_RATE 1	   // s
+#define EEPROM_UPDATE_RATE 60  // s
+#define RTC_UPDATE_RATE 10	   // s
+#define ACTIVITY_LED_RATE 0.25 // s
+#define HIZ INPUT
 #define PRINT_USA_DATE
 #define SQW_INPUT_PIN 2	  // Input pin to read SQW
 #define SQW_OUTPUT_PIN 13 // LED to indicate SQW's state
@@ -190,6 +195,11 @@ extern sensors_event_t *temperature;
 
 void checkTemperatureCallback();
 void checkTimeCallback();
+void activityLEDCallback();
+void LEDPowerOn();
+void LEDPowerOff();
+void STPPowerOn();
+void STPPowerOff();
 
 // Standard Mode - White - Default
 void standardModeCallback_ResetLEDs();
@@ -296,6 +306,7 @@ extern Task CheckTimeTask;
 extern Task CheckTemperatureTask;
 extern Task ShowStatusLEDTask;
 extern Task ShowModeLEDTask;
+extern Task ActivityLEDTask;
 
 // Stepper Tasks
 extern Task SetSTPTargetTask;

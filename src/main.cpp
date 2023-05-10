@@ -214,6 +214,7 @@ Task CheckTemperatureTask(TEMP_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTem
 Task CheckTimeTask(RTC_UPDATE_RATE *TASK_SECOND, TASK_FOREVER, &checkTimeCallback, &ts, true);
 Task ShowStatusLEDTask(STATUS_LED_FLASH_RATE *TASK_MILLISECOND, TASK_FOREVER, &showStatusLED, &ts, false);
 Task ShowModeLEDTask(TASK_IMMEDIATE, TASK_ONCE, &showModeLED, &ts, false);
+Task ActivityLEDTask(ACTIVITY_LED_RATE *TASK_MILLISECOND, TASK_FOREVER, &activityLEDCallback, &ts, true);
 
 // Stepper Tasks
 Task RunSTPTask(TASK_IMMEDIATE, TASK_FOREVER, &runSTPCallback, &ts, false);
@@ -365,6 +366,9 @@ void setup()
 	pinMode(ENCODER_2A_PIN, INPUT);
 	pinMode(ENCODER_2B_PIN, INPUT);
 	pinMode(PWR_SUPERVISOR_PIN, INPUT);
+	pinMode(ACTIVITY_LED_PIN, OUTPUT);
+	pinMode(STP_PWR_PIN, HIZ);
+	pinMode(LED_PWR_PIN, HIZ);
 
 	pinMode(SQW_INPUT_PIN, INPUT_PULLUP);
 	pinMode(SQW_OUTPUT_PIN, OUTPUT);

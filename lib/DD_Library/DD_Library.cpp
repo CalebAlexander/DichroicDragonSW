@@ -14,6 +14,25 @@ void checkTimeCallback()
 	// Do something with this
 }
 
+void LEDPowerOn()
+{
+	pinMode(LED_PWR_PIN, OUTPUT);
+	digitalWrite(LED_PWR_PIN, LOW);
+}
+void LEDPowerOff()
+{
+	pinMode(LED_PWR_PIN, HIZ);
+}
+void STPPowerOn()
+{
+	pinMode(STP_PWR_PIN, OUTPUT);
+	digitalWrite(STP_PWR_PIN, LOW);
+}
+void STPPowerOff()
+{
+	pinMode(STP_PWR_PIN, HIZ);
+}
+
 // -------------------------- Standard Mode ------------------------------
 // (1) - RESET LEDS
 void standardModeCallback_ResetLEDs()
@@ -237,6 +256,8 @@ void updateLEDsCallback()
 	case PATTERN2:
 
 		// Make LEDs "bubble" randomly
+		break;
+	default:
 		break;
 	}
 
@@ -494,8 +515,23 @@ void powerSupervisor_ISR()
 	// Power off to LEDs and Steppers
 }
 
+void activityLEDCallback()
+{
+	if (ActivityLEDTask.getRunCounter() % 2 == 0)
+	{ // ON
+		digitalWrite(ACTIVITY_LED_PIN, HIGH);
+	}
+	else
+	{ // OFF
+		digitalWrite(ACTIVITY_LED_PIN, LOW);
+	}
+}
+
 // ------------------- Accel Stepper required functions --------------------------
-void stp1f1() { AFMS_Steppers[0]->onestep(FORWARD, SINGLE); }
+void stp1f1()
+{
+	AFMS_Steppers[0]->onestep(FORWARD, SINGLE);
+}
 void stp1b1() { AFMS_Steppers[0]->onestep(BACKWARD, SINGLE); }
 void stp2f1() { AFMS_Steppers[1]->onestep(FORWARD, SINGLE); }
 void stp2b1() { AFMS_Steppers[1]->onestep(BACKWARD, SINGLE); }
