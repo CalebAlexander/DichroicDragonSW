@@ -16,76 +16,95 @@ void checkTimeCallback()
 
 void LEDPowerOn()
 {
-	pinMode(LED_PWR_PIN, OUTPUT);
-	digitalWrite(LED_PWR_PIN, LOW);
+	pinMode(LED_PWR_PIN, OUTPUT);	// low impedance, current flows
+	digitalWrite(LED_PWR_PIN, LOW); // LED ON
 }
 void LEDPowerOff()
 {
-	pinMode(LED_PWR_PIN, HIZ);
+	digitalWrite(LED_PWR_PIN, HIGH); // LED OFF
+	pinMode(LED_PWR_PIN, HIZ);		 // high impedance, no current flows
 }
 void STPPowerOn()
 {
-	pinMode(STP_PWR_PIN, OUTPUT);
-	digitalWrite(STP_PWR_PIN, LOW);
+	pinMode(STP_PWR_PIN, OUTPUT);	// low impedance, current flows
+	digitalWrite(STP_PWR_PIN, LOW); // LED ON
 }
 void STPPowerOff()
 {
-	pinMode(STP_PWR_PIN, HIZ);
+	digitalWrite(STP_PWR_PIN, HIGH); // LED OFF
+	pinMode(STP_PWR_PIN, HIZ);		 // high impedance, no current flows
 }
 
 // -------------------------- Standard Mode ------------------------------
+// Brightnesses - constant and even
+// STPs - same speed and direction
+// -----------------------------------------------------------------------
+
 // (1) - RESET LEDS
 void standardModeCallback_ResetLEDs()
 {
 	previousT = ts.getCurrentTask();
+
+	StandardModeTask.setCallback(&standardModeCallback_SetHome); // set next part of task
+
 	currentMode = STANDARD;
 	ShowModeLEDTask.restart();
 	// Reset LEDs
-	UpdateLEDsTask.disable(); // stop constantly updating the LEDs
-	memset(brightnesses, currentB, sizeof(brightnesses));
-	SetLEDTask.restart();
-	// SetLEDTask.forceNextIteration();
-	StandardModeTask.setCallback(&standardModeCallback_SetHome);
+	UpdateLEDsTask.disable();							  // stop constantly updating the LEDs
+	memset(brightnesses, currentB, sizeof(brightnesses)); // set all brightnesses to the same current brightness
+	SetLEDTask.restart();								  // set all LEDs to brightnesses in currentB array
+														  // when done -> comes back to next part of this task
 }
 // (2) - SET STP TARGETS TO HOME
 void standardModeCallback_SetHome()
 {
+	StandardModeTask.setCallback(&standardModeCallback_GoHome); // set next part of task
+
 	// Reset targets
-	memset(targets, HOME, sizeof(targets));
-	SetSTPTargetTask.restart();
-	StandardModeTask.setCallback(&standardModeCallback_GoHome);
+	memset(targets, HOME, sizeof(targets)); // set all stp target array to home
+	SetSTPTargetTask.restart();				// assign stp target array to STPs
+											// when done -> comes back to next part of this task
 }
 // (3) - RUN STP TO HOME
 void standardModeCallback_GoHome()
 {
+	StandardModeTask.setCallback(&standardModeCallback_SetSTPSpeeds); // set next part of task
+
 	// turn off indefinite running
 	RunSTPTask.disable();
 	// run until home position
 	RunToSTPTask.restart();
-	StandardModeTask.setCallback(&standardModeCallback_SetSTPSpeeds);
+	// when done -> comes back to next part of this task
 }
 // (4) - SET NEW STP SPEEDS
 void standardModeCallback_SetSTPSpeeds()
 {
+	StandardModeTask.setCallback(&standardModeCallback_RestartSTPRun); // set next part of task
 	// Set stepper speeds
 	SetSTPSpeedsTask.restart();
-	StandardModeTask.setCallback(&standardModeCallback_RestartSTPRun);
+	// when done -> comes back to next part of this task
 }
 // (5) - RESTART STP RUN SPEED
 void standardModeCallback_RestartSTPRun()
 {
+	StandardModeTask.setCallback(&standardModeCallback_ResetLEDs); // reset task to first part
+
 	previousT = NULL; // this is last step so don't need to come back
 	// enable run task
 	RunSTPTask.restart();
-	// Done
-	StandardModeTask.setCallback(&standardModeCallback_ResetLEDs);
+	// Run
 }
 
 // -------------------------- Frozen Mode ------------------------------
+// Brightnesses - constant and even
+// STPs - stopped in current position
+// ---------------------------------------------------------------------
 
 // (1) - RESET LEDS
 void frozenModeCallback_ResetLEDs()
 {
+	FrozenModeTask.setCallback(&frozenModeCallback_StopSTPs); // set next part of task
+
 	previousT = ts.getCurrentTask();
 	currentMode = FROZEN;
 	ShowModeLEDTask.restart();
@@ -94,24 +113,30 @@ void frozenModeCallback_ResetLEDs()
 	memset(brightnesses, currentB, sizeof(brightnesses));
 	SetLEDTask.restart();
 	// SetLEDTask.forceNextIteration();
-	FrozenModeTask.setCallback(&frozenModeCallback_StopSTPs);
+	// when done -> comes back to next part of this task
 }
 // (2) - STOP STPS
 void frozenModeCallback_StopSTPs()
 {
+	FrozenModeTask.setCallback(&frozenModeCallback_ResetLEDs); // reset task to first part
+
 	previousT = NULL; // this is last step so don't need to come back
 	// disable indefinite running
 	RunSTPTask.disable();
 	StopSTPTask.restart();
 	// Done
-	FrozenModeTask.setCallback(&frozenModeCallback_ResetLEDs);
 }
 
 // -------------------------- Random Mode ------------------------------
+// Brightnesses - constant and even
+// STPs - random speed and direction
+// ---------------------------------------------------------------------
 
 // (1) - RESET LEDS
 void randomModeCallback_ResetLEDs()
 {
+	RandomModeTask.setCallback(&randomModeCallback_SetSTPSpeeds); // set next part of task
+
 	previousT = ts.getCurrentTask();
 	currentMode = RANDOM;
 	ShowModeLEDTask.restart();
@@ -120,23 +145,30 @@ void randomModeCallback_ResetLEDs()
 	memset(brightnesses, currentB, sizeof(brightnesses));
 	SetLEDTask.restart();
 	// SetLEDTask.forceNextIteration();
-	RandomModeTask.setCallback(&randomModeCallback_SetSTPSpeeds);
+	// when done -> comes back to next part of this task
 }
 // (2) - SET NEW STP SPEEDS
 void randomModeCallback_SetSTPSpeeds()
 {
+	RandomModeTask.setCallback(&randomModeCallback_ResetLEDs); // reset task to first part
+
 	previousT = NULL; // this is last step so don't need to come back
 	// Generate Random Speeds and directions
 
 	// Set stepper speeds
 	SetSTPSpeedsTask.restart();
-	RandomModeTask.setCallback(&randomModeCallback_ResetLEDs);
+	// when done -> comes back to next part of this task
 }
 // -------------------------- Pattern 1 Mode - Dragon Flow------------------------------
+// Brightnesses - flow along length of dragon
+// STPs - stopped in home position
+// ---------------------------------------------------------------------
 
 // (1) - RESET LEDS
 void pattern1ModeCallback_ResetLEDs()
 {
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_SetHome); // set next part of task
+
 	previousT = ts.getCurrentTask();
 	currentMode = PATTERN1;
 	ShowModeLEDTask.restart();
@@ -145,40 +177,50 @@ void pattern1ModeCallback_ResetLEDs()
 	memset(brightnesses, OFF, sizeof(brightnesses)); // turn all LEDs off
 	SetLEDTask.restart();
 	// SetLEDTask.forceNextIteration();
-	Pattern1ModeTask.setCallback(&pattern1ModeCallback_SetHome);
+	// when done -> comes back to next part of this task
 }
 // (2) - SET STP TARGETS TO HOME
 void pattern1ModeCallback_SetHome()
 {
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_GoHome); // set next part of task
+
 	// Reset targets
 	memset(targets, HOME, sizeof(targets));
 	SetSTPTargetTask.restart();
-	Pattern1ModeTask.setCallback(&pattern1ModeCallback_GoHome);
+	// when done -> comes back to next part of this task
 }
 // (3) - RUN STP TO HOME
 void pattern1ModeCallback_GoHome()
 {
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_StartPattern); // set next part of task
 
 	// turn off indefinite running
 	RunSTPTask.disable();
 	// run until home position
 	RunToSTPTask.restart();
-	Pattern1ModeTask.setCallback(&pattern1ModeCallback_StartPattern);
+	// when done -> comes back to next part of this task
 }
 // (4) - START LED PATTERN
 void pattern1ModeCallback_StartPattern()
 {
+	Pattern1ModeTask.setCallback(&pattern1ModeCallback_ResetLEDs); // reset task to first part
+
 	previousT = NULL; // this is last step so don't need to come back
 
 	UpdateLEDsTask.restart();
-	Pattern1ModeTask.setCallback(&pattern1ModeCallback_ResetLEDs);
+	StopSTPTask.restart();
 }
 
 // -------------------------- Pattern 2 Mode - Bubbling ------------------------------
+// Brightnesses - random increasing and decreasing
+// STPs - random speed and direction
+// ---------------------------------------------------------------------
 
 // (1) - RESET LEDS
 void pattern2ModeCallback_ResetLEDs()
 {
+	Pattern2ModeTask.setCallback(&pattern2ModeCallback_SetSTPSpeeds);
+
 	previousT = ts.getCurrentTask();
 	currentMode = PATTERN2;
 	ShowModeLEDTask.restart();
@@ -187,7 +229,7 @@ void pattern2ModeCallback_ResetLEDs()
 	// memset(brightnesses, OFF, sizeof(brightnesses)); // turn all LEDs off
 	// SetLEDTask.restart();
 	// SetLEDTask.forceNextIteration();
-	Pattern2ModeTask.setCallback(&pattern2ModeCallback_SetSTPSpeeds);
+	Pattern2ModeTask.forceNextIteration();
 }
 // (2) - SET NEW STP SPEEDS
 void pattern2ModeCallback_SetSTPSpeeds()
@@ -209,6 +251,10 @@ void pattern2ModeCallback_StartPattern()
 }
 
 // -------------------------- Pattern 3 Mode - Resting Dragon ------------------------------
+// Brightnesses - constant and even
+// STPs - stopped in home position
+// ---------------------------------------------------------------------
+
 // (1) - RESET LEDS
 void pattern3ModeCallback_ResetLEDs()
 {
@@ -407,11 +453,11 @@ void setSTPTargetsCallback()
 {
 	if (ts.getCurrentTask()->isFirstIteration())
 	{
-		currentI = 0;
+		currentI = 0; // set index to 0 if first iteration
 	}
-	steppers[currentI].moveTo(targets[currentI]);
-	currentI = (currentI + 1) % NUM_STEPPERS;
-	if (currentI >= NUM_STEPPERS) // all steppers set
+	steppers[currentI].moveTo(targets[currentI]); // set current stepper to current target
+	currentI = (currentI + 1);					  // increment current index
+	if (currentI >= NUM_STEPPERS)				  // if all steppers set
 	{
 		// Stop this task
 		ts.getCurrentTask()->disable();
@@ -449,13 +495,11 @@ void stopSTPCallback()
 {
 	if (ts.getCurrentTask()->isFirstIteration())
 	{
-		numStopped = 0;
 		currentI = 0;
 	}
 	steppers[currentI].stop();
-	currentI = (currentI + 1) % NUM_STEPPERS;
-	numStopped++;
-	if (numStopped >= NUM_STEPPERS) // all steppers stopped
+	currentI = (currentI + 1);
+	if (currentI >= NUM_STEPPERS) // all steppers stopped
 	{
 		stopped = true;
 		// Stop this task
