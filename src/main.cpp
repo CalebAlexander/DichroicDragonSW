@@ -5,7 +5,7 @@
 Adafruit_MotorShield AFMS[] = {
 	Adafruit_MotorShield(PWM_1_ADDRESS), // PWM1
 	Adafruit_MotorShield(PWM_2_ADDRESS), // PWM2
-	Adafruit_MotorShield(PWM_3_ADDRESS), // PWM3
+	Adafruit_MotorShield(PWM_3_ADDRESS), // PWM3 blah
 	Adafruit_MotorShield(PWM_4_ADDRESS), // PWM4
 	Adafruit_MotorShield(PWM_5_ADDRESS), // PWM5
 	Adafruit_MotorShield(PWM_6_ADDRESS), // PWM6
